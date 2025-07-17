@@ -42,16 +42,16 @@ export const routes: Routes = [
 修改所有`app.config.ts`使用hash路由: `provideRouter(routes, withHashLocation())`
 
 ```bash
-npm i -D ncp express
+npm i -D ncp express fs-extra
 ```
 
-配置dev: `projects\shell\env\dev\federation.manifest.json` (因为这个是assets形式访问的，不能用envrionment fileReplacements那套(可以修改main.ts))
+配置dev: `projects/shell/env/dev/federation.manifest.json` (因为这个是assets形式访问的，不能用envrionment fileReplacements那套(可以修改main.ts))
 
 ```json
 { "products": "http://localhost:4201/remoteEntry.json" }
 ```
 
-配置production的远端地址`projects\shell\env\prod\federation.manifest.json`
+配置production的远端地址`projects/shell/env/prod/federation.manifest.json`
 
 ```json
 { "products": "/anfd/assets/remote/products/remoteEntry.json" }
@@ -103,6 +103,18 @@ npm i -D ncp express
     }
   }
 }
+```
+
+`postbuild.js`
+
+```js
+const fs = require('fs-extra');
+const path = require('path');
+const productsDist = path.resolve('dist', 'products', 'browser');
+const targetPath = path.resolve('dist', 'shell', 'browser', 'assets', 'remote', 'products');
+fs.ensureDirSync(targetPath);
+fs.moveSync(productsDist, targetPath, { overwrite: true });
+console.log(`Moved ${productsDist} to ${targetPath}`);
 ```
 
 `local-preview.js`
