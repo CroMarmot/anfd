@@ -1,59 +1,141 @@
-# AngularMfeNativeFederation
-
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.1.0.
-
-## Development server
-
-To start a local development server, run:
+# angular native federation Demo
 
 ```bash
-ng serve
+ng version # 使用的 20 版本
+ng new anfd-workspace --create-application=false
+cd anfd-workspace
+ng g application shell --routing --style=scss --prefix app-shell
+ng g application products --routing --style=scss --prefix app-products
+npm i -D @angular-architects/native-federation
+ng g @angular-architects/native-federation:init --project shell --port 4200 --type dynamic-host
+ng g c home --project shell
+ng g @angular-architects/native-federation:init --project products --port 4201 --type remote
+sed -i 's/:4200/:4201/g' projects/shell/public/federation.manifest.json
+# 修改 projects/shell/src/app/app.routes.ts 见下
+ng serve shell
+ng serve products
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+`projects/shell/src/app/app.routes.ts`
 
-## Code scaffolding
+```ts
+import { loadRemoteModule } from '@angular-architects/native-federation';
+import { Routes } from '@angular/router';
+import { Home } from './home/home';
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+export const routes: Routes = [
+  { path: '', component: Home, pathMatch: 'full' },
+  {
+    path: 'products',
+    loadComponent: () =>
+        loadRemoteModule('products', './Component').then((m) => m.App), // 需要注意, 新的ng g c生成的Component是不带Component的，这里App和Home都是，老版本的对应是AppComponent和HomeComponent
+  },
+  {
+      path: '**',
+      component: Home,
+  }
+];
+```
+
+## generate static
+
+修改所有`app.config.ts`使用hash路由: `provideRouter(routes, withHashLocation())`
 
 ```bash
-ng generate component component-name
+npm i -D ncp express
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+配置dev: `projects\shell\env\dev\federation.manifest.json` (因为这个是assets形式访问的，不能用envrionment fileReplacements那套(可以修改main.ts))
+
+```json
+{ "products": "http://localhost:4201/remoteEntry.json" }
+```
+
+配置production的远端地址`projects\shell\env\prod\federation.manifest.json`
+
+```json
+{ "products": "/anfd/assets/remote/products/remoteEntry.json" }
+```
+
+`angular.json`增加
+- v18新版的会有browser文件夹https://github.com/angular/angular-cli/issues/26304
+
+```json
+{
+  "projects": {
+    "shell": {
+      "architect": {
+        "build": {
+          "options": {
+            "outputPath": "dist/shell"
+          }
+        },
+        "esbuild": {
+          "configurations": {
+            "production": {
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "projects/shell/env/prod"
+                }
+              ]
+            },
+            "development": {
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "projects/shell/env/dev"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "products": {
+      "architect": {
+        "build": {
+          "options": {
+            "outputPath": "dist/products"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+`local-preview.js`
+
+```js
+const express = require('express')
+const app = express()
+const port = 3000
+const path = require('path');
+app.use('/anfd', express.static(path.join(__dirname, 'dist/shell/broswer'))); // ng v18 会多一个browser文件夹
+app.get('/', (req, res) => { res.send('Hello World!') })
+app.listen(port, () => { console.log(`http://localhost:${port}/anfd/`) })
+```
+
+`package.json`增加
+
+```json
+{
+  "scripts": {
+    "build:shell": "ng build shell --base-href /anfd/",
+    "build:products": "ng build products --base-href /anfd/assets/remote/products/",
+    "postbuild": "node postbuild.js",
+    "build:all": "npm run build:shell && npm run build:products && npm run postbuild",
+    "serve:dist": "node local-preview.js",
+    "gh-pages": "cd dist/shell/browser && rm -rf ./.git && git init && git add . && git remote add origin git@github.com:CroMarmot/anfd.git && git commit -m \"Deploy to GitHub Pages\" && git push --force origin HEAD:gh-pages && cd ../../.."
+  }
+}
+```
+
+gh-pages 默認是jekyll, 需要static配置，直接網頁上有引导设置成static.yml的action即可
 
 ```bash
-ng generate --help
+npm run build:all # 生成静态文件
+npm run serve:dist
+npm run gh-pages
 ```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

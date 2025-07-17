@@ -1,12 +1,18 @@
 {
-  "name": "angular-mfe-native-federation",
+  "name": "anfd",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "build:shell": "ng build shell --base-href /anfd/",
+    "build:products": "ng build products --base-href /anfd/assets/remote/products/",
+    "postbuild": "node postbuild.js",
+    "build:all": "npm run build:shell && npm run build:products && npm run postbuild",
+    "serve:dist": "node local-preview.js",
+    "gh-pages": "cd dist/shell/browser && rm -rf ./.git && git init && git add . && git remote add origin git@github.com:CroMarmot/anfd.git && git commit -m \"Deploy to GitHub Pages\" && git push --force origin HEAD:gh-pages && cd ../../.."
   },
   "prettier": {
     "overrides": [
@@ -20,25 +26,40 @@
   },
   "private": true,
   "dependencies": {
+    "@angular/animations": "^20.1.0",
     "@angular/common": "^20.1.0",
     "@angular/compiler": "^20.1.0",
     "@angular/core": "^20.1.0",
     "@angular/forms": "^20.1.0",
     "@angular/platform-browser": "^20.1.0",
     "@angular/router": "^20.1.0",
+    "@softarc/native-federation-node": "^2.0.10",
+    "cors": "^2.8.5",
+    "es-module-shims": "^1.5.12",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
   },
   "devDependencies": {
+    "@angular-architects/native-federation": "^20.1.2",
+    "@angular-devkit/build-angular": "^20.1.0",
+    "@angular/build": "^20.1.0",
     "@angular/cli": "^20.1.0",
     "@angular/compiler-cli": "^20.1.0",
+    "@types/express": "^5.0.1",
     "@types/jasmine": "~5.1.0",
+    "@types/node": "^20.17.19",
+    "express": "^5.1.0",
+    "fs-extra": "^11.3.0",
+    "http-server": "^14.1.1",
     "jasmine-core": "~5.8.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "ncp": "^2.0.0",
+    "serve": "^14.2.4",
     "typescript": "~5.8.2"
   }
 }
